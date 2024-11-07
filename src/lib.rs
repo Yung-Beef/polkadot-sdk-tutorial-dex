@@ -54,25 +54,20 @@ pub mod pallet {
             + fungible::freeze::Inspect<Self::AccountId>
             + fungible::freeze::Mutate<Self::AccountId>;
         type Fungibles: fungibles::Inspect<Self::AccountId>
-            + fungibles::Mutate<Self::AccountId>;
-    }
-
-    #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo)]
-    pub struct LiquidityPool<T: Config> {
-        pub assets: (AssetId, AssetId),
-        pub reserves: (Balance, Balance),
-        pub total_liquidity: Balance,
-        pub liquidity_token: AssetId,
-        _marker: PhantomData<T>,
+            + fungibles::Mutate<Self::AccountId>
+            + fungibles::hold::Inspect<Self::AccountId>
+            + fungibles::hold::Mutate<Self::AccountId>
+            + fungibles::freeze::Inspect<Self::AccountId>
+            + fungibles::freeze::Mutate<Self::AccountId>;
     }
 
     /// A storage item for this pallet.
     #[pallet::storage]
-    pub type LiquidityPoolBalance<T: Config> = StorageValue<_, Balance, ValueQuery>;
+    pub type LiquidityPoolBalance<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     /// A storage map for this pallet.
     #[pallet::storage]
-    pub type LiquidityPools<T: Config> = StorageMap<_, Blake2_128Concat, AssetId, (AssetId, AssetId)>;
+    pub type LiquidityTokens<T: Config> = StorageMap<_, Blake2_128Concat, AssetIdOf<T>, (AssetIdOf<T>, AssetIdOf<T>)>;
 
     /// Events that functions in this pallet can emit.
     #[pallet::event]
