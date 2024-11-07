@@ -5,6 +5,7 @@
 use frame_support::traits::fungible;
 use frame_support::traits::fungibles;
 pub use pallet::*;
+mod liquidity_pools;
 
 // Define type aliases for easier access
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -67,7 +68,8 @@ pub mod pallet {
 
     /// A storage map for this pallet.
     #[pallet::storage]
-    pub type LiquidityTokens<T: Config> = StorageMap<_, Blake2_128Concat, AssetIdOf<T>, (AssetIdOf<T>, AssetIdOf<T>)>;
+    pub type LiquidityTokens<T: Config> =
+        StorageMap<_, Blake2_128Concat, AssetIdOf<T>, (AssetIdOf<T>, AssetIdOf<T>)>;
 
     /// Events that functions in this pallet can emit.
     #[pallet::event]
@@ -76,7 +78,25 @@ pub mod pallet {
 
     /// Errors that can be returned by this pallet.
     #[pallet::error]
-    pub enum Error<T> {/* Pallet Error Variants Go Here */}
+    pub enum Error<T> {
+        /// Insufficient liquidity available in the pool.
+        InsufficientLiquidity,
+
+        /// Insufficient reserves available in the pool for the requested operation.
+        InsufficientReserves,
+
+        /// Adding liquidity overflows.
+        LiquidityOverflow,
+
+        /// Adding reserves overflows.
+        ReserveOverflow,
+
+        InvalidAssetIn,
+        InvalidAssetOut,
+        InsufficientAmountOut,
+        ArithmeticOverflow,
+        DivisionByZero,
+    }
 
     /// The pallet's dispatchable functions ([`Call`]s).
     #[pallet::call]
