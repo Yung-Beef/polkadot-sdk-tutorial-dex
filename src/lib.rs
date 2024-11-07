@@ -2,7 +2,23 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
+use frame_support::traits::fungible;
+use frame_support::traits::fungibles;
 pub use pallet::*;
+
+// Define type aliases for easier access
+pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+pub type AssetIdOf<T> = <<T as Config>::Fungibles as fungibles::Inspect<
+    <T as frame_system::Config>::AccountId,
+>>::AssetId;
+
+pub type BalanceOf<T> = <<T as Config>::NativeBalance as fungible::Inspect<
+    <T as frame_system::Config>::AccountId,
+>>::Balance;
+
+pub type AssetBalanceOf<T> = <<T as Config>::Fungibles as fungibles::Inspect<
+    <T as frame_system::Config>::AccountId,
+>>::Balance;
 
 // FRAME pallets require their own "mock runtimes" to be able to run unit tests. This module
 // contains a mock runtime specific for testing this pallet's functionality.
@@ -31,15 +47,32 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         /// The overarching runtime event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type NativeBalance: fungible::Inspect<Self::AccountId>
+            + fungible::Mutate<Self::AccountId>
+            + fungible::hold::Inspect<Self::AccountId>
+            + fungible::hold::Mutate<Self::AccountId>
+            + fungible::freeze::Inspect<Self::AccountId>
+            + fungible::freeze::Mutate<Self::AccountId>;
+        type Fungibles: fungibles::Inspect<Self::AccountId>
+            + fungibles::Mutate<Self::AccountId>;
+    }
+
+    #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo)]
+    pub struct LiquidityPool<T: Config> {
+        pub assets: (AssetId, AssetId),
+        pub reserves: (Balance, Balance),
+        pub total_liquidity: Balance,
+        pub liquidity_token: AssetId,
+        _marker: PhantomData<T>,
     }
 
     /// A storage item for this pallet.
     #[pallet::storage]
-    pub type SomeItem<T> = StorageValue<_, u32>;
+    pub type LiquidityPoolBalance<T: Config> = StorageValue<_, Balance, ValueQuery>;
 
     /// A storage map for this pallet.
     #[pallet::storage]
-    pub type SomeMap<T> = StorageMap<_, Blake2_128Concat, u32, u32>;
+    pub type LiquidityPools<T: Config> = StorageMap<_, Blake2_128Concat, AssetId, (AssetId, AssetId)>;
 
     /// Events that functions in this pallet can emit.
     #[pallet::event]
