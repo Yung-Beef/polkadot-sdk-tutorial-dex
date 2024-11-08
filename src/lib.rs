@@ -2,6 +2,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
+use frame_support::sp_runtime::traits::Zero;
 use frame_support::traits::fungible;
 use frame_support::traits::fungibles;
 pub use pallet::*;
@@ -59,7 +60,8 @@ pub mod pallet {
             + fungibles::hold::Inspect<Self::AccountId>
             + fungibles::hold::Mutate<Self::AccountId>
             + fungibles::freeze::Inspect<Self::AccountId>
-            + fungibles::freeze::Mutate<Self::AccountId>;
+            + fungibles::freeze::Mutate<Self::AccountId>
+            + storage::types::EncodeLikeTuple<Self::AccountId>;
     }
 
     /// A storage item for this pallet.
@@ -68,13 +70,15 @@ pub mod pallet {
 
     /// A storage map for this pallet.
     #[pallet::storage]
-    pub type LiquidityTokens<T: Config> =
+    pub type LiquidityPools<T: Config> =
         StorageMap<_, Blake2_128Concat, AssetIdOf<T>, (AssetIdOf<T>, AssetIdOf<T>)>;
 
     /// Events that functions in this pallet can emit.
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    pub enum Event<T: Config> {/* Pallet Event Variants Go Here */}
+    pub enum Event<T: Config> {
+        LiquidityPoolCreated(AccountIdOf<T>, (AssetIdOf<T>, AssetIdOf<T>)),
+    }
 
     /// Errors that can be returned by this pallet.
     #[pallet::error]
@@ -96,12 +100,41 @@ pub mod pallet {
         InsufficientAmountOut,
         ArithmeticOverflow,
         DivisionByZero,
+        LiquidityPoolAlreadyExists,
     }
 
     /// The pallet's dispatchable functions ([`Call`]s).
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /* User Callable Functions Go Here */
+        #[pallet::call_index(0)]
+        #[pallet::weight(Weight::default())]
+        pub fn create_liquidity_pool(
+            origin: OriginFor<T>,
+            asset_a: AssetIdOf<T>,
+            asset_b: AssetIdOf<T>,
+            liquidity_token: AssetIdOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            let trading_pair: (<<T as Config>::Fungibles as Inspect<<T as Config>::AccountId>>::AssetId, <<T as Config>::Fungibles as Inspect<<T as Config>::AccountId>>::AssetId) = (asset_a, asset_b);
+            ensure!(
+                !LiquidityPools::<T>::contains_key(trading_pair),
+                Error::<T>::LiquidityPoolAlreadyExists
+            );
+
+            let liquidity_pool = crate::liquidity_pools::LiquidityPool {
+                assets: trading_pair,
+                reserves: (Zero::zero(), Zero::zero()),
+                total_liquidity: Zero::zero(),
+                liquidity_token,
+            };
+
+            LiquidityPools::<T>::insert(trading_pair, liquidity_pool);
+
+            Self::deposit_event(Event::LiquidityPoolCreated(who, trading_pair));
+
+            Ok(())
+        }
     }
 
     /// The pallet's internal functions.

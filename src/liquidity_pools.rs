@@ -2,6 +2,7 @@ use crate::*;
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero};
 use frame_support::sp_runtime::SaturatedConversion;
+pub use sp_runtime::Perbill;
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 #[scale_info(skip_type_params(T))]
@@ -10,7 +11,6 @@ pub struct LiquidityPool<T: Config> {
     pub reserves: (AssetBalanceOf<T>, AssetBalanceOf<T>),
     pub total_liquidity: AssetBalanceOf<T>,
     pub liquidity_token: AssetIdOf<T>,
-    _marker: PhantomData<T>,
 }
 
 impl<T: Config> LiquidityPool<T> {
@@ -146,10 +146,9 @@ impl<T: Config> LiquidityPool<T> {
             .ok_or(Error::<T>::ArithmeticOverflow)?;
 
         // Perform integer division to obtain the final output amount
-        let amount_out = numerator
-            .checked_div(&denominator)
-            .ok_or(Error::<T>::DivisionByZero)?;
+        let frac = Perbill::from_rational(numerator, denominator);
+        let amount_out = Perbill::deconstruct(frac);
 
-        Ok(amount_out)
+        Ok(amount_out.into())
     }
 }
